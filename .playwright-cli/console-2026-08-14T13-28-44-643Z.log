@@ -1,0 +1,4 @@
+[    3361ms] [WARNING] [GSI_LOGGER]: Your client application uses one of the Google One Tap prompt UI status methods that may stop functioning when FedCM becomes mandatory. Refer to the migration guide to update your code accordingly and opt-in to FedCM to test your changes. Learn more: https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#display_moment and https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#skipped_moment @ https://accounts.google.com/gsi/client:86
+[    3481ms] [ERROR] Not signed in with the identity provider. @ https://chatgpt.com/c/6a7d7fda-6d00-83eb-8d1d-fd0bdd134cd3:0
+[    3569ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://chatgpt.com/backend-anon/conversation/6a7d7fda-6d00-83eb-8d1d-fd0bdd134cd3:0
+[    3674ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://chatgpt.com/backend-anon/conversation/init:0
