@@ -2,8 +2,6 @@ name: Playwright Tests
 
 on:
   push:
-  pull_request:
-
   schedule:
     - cron: '0 2 * * *'
 
@@ -38,7 +36,7 @@ jobs:
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
         run: |
           curl -i \
-            -X POST "$API_URL/verifyLogin" \
+            -X POST "https://automationexercise.com/api/verifyLogin" \
             --data-urlencode "email=$TEST_EMAIL" \
             --data-urlencode "password=$TEST_PASSWORD"
 
