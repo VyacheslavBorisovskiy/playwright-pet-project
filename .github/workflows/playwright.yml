@@ -28,23 +28,11 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-
-      - name: Test API from CI
-        env:
-          API_URL: ${{ vars.API_URL }}
-          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
-          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-        run: |
-          curl -i \
-            -X POST "https://automationexercise.com/api/verifyLogin" \
-            --data-urlencode "email=$TEST_EMAIL" \
-            --data-urlencode "password=$TEST_PASSWORD"
-
       - name: Run smoke tests
         run: npx playwright test --grep @smoke
         env:
-          BASE_URL: ${{ vars.BASE_URL }}
-          API_URL: ${{ vars.API_URL }}
+          BASE_URL: https://automationexercise.com
+          API_URL: https://automationexercise.com/api
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
       - name: Generate Allure report
@@ -90,8 +78,8 @@ jobs:
       - name: Run regression tests
         run: npx playwright test --grep @regression
         env:
-          BASE_URL: ${{ vars.BASE_URL }}
-          API_URL: ${{ vars.API_URL }}
+          BASE_URL: https://automationexercise.com
+          API_URL: https://automationexercise.com/api
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
       - name: Generate Allure report
