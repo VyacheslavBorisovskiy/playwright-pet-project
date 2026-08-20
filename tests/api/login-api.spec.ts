@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test(
-  'Verify user login via API',
+  'Verify login via API',
   {
     tag: '@smoke',
   },
