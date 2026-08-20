@@ -31,6 +31,18 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
+      - name: Check API
+        env:
+          API_URL: ${{ vars.API_URL }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          curl -i \
+            -X POST \
+            "$API_URL/verifyLogin" \
+            --data-urlencode "email=$TEST_EMAIL" \
+            --data-urlencode "password=$TEST_PASSWORD"
+
       - name: Run smoke tests
         run: npx playwright test --grep @smoke
         env:
