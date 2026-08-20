@@ -1,21 +1,25 @@
 import { test, expect } from '@playwright/test';
 
-test('Verify user login via API', {
-  tag: '@smoke',
-}, async ({ request }) => {
-  const response = await request.post(
-    `${process.env.API_URL}/verifyLogin`,
-    {
+test(
+  'Verify user login via API',
+  {
+    tag: '@smoke',
+  },
+  async ({ request }) => {
+    const response = await request.post(`${process.env.API_URL}/verifyLogin`, {
       form: {
         email: process.env.TEST_EMAIL!,
         password: process.env.TEST_PASSWORD!,
       },
-    },
-  );
+    });
 
-  expect(response.status()).toBe(200);
+    expect(response.status()).toBe(200);
 
-  const responseBody = await response.text();
+    const contentType = response.headers()['content-type'];
+    expect(contentType).toContain('text/plain');
 
-  expect(responseBody).toContain('User exists!');
-});
+    const responseBody = await response.text();
+
+    expect(responseBody).toContain('User exists!');
+  },
+);

@@ -22,27 +22,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium
-
-      - name: Check API
-        env:
-          API_URL: ${{ vars.API_URL }}
-          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
-          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-        run: |
-          curl -i \
-            -X POST \
-            "$API_URL/verifyLogin" \
-            --data-urlencode "email=$TEST_EMAIL" \
-            --data-urlencode "password=$TEST_PASSWORD"
-
+        run: npx playwright install --with-deps
       - name: Run smoke tests
         run: npx playwright test --grep @smoke
         env:
@@ -58,7 +45,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-report
+          name: allure-report-smoke
           path: allure-report
 
       - name: Upload Playwright report
@@ -81,7 +68,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 25
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
