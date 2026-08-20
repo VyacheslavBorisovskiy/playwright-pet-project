@@ -39,14 +39,15 @@ jobs:
         if: always()
         run: npx allure generate allure-results -o allure-report
 
-      - name: Upload Allure report
+      - name: Upload Smoke Allure report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-report-smoke
           path: allure-report
+          retention-days: 7
 
-      - name: Upload Playwright report
+      - name: Upload Smoke Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -86,16 +87,64 @@ jobs:
         if: always()
         run: npx allure generate allure-results -o allure-report
 
-      - name: Upload Allure report
+      - name: Upload Regression Allure report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-report
+          name: allure-report-regression
           path: allure-report
-      - name: Upload Playwright report
+          retention-days: 7
+      - name: Upload Regression Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-regression
           path: playwright-report/
           retention-days: 14
+
+  deploy-report:
+    name: Publish Allure Report
+    needs:
+      - smoke
+      - regression
+    if: always() && (needs.smoke.result == 'success' || needs.smoke.result == 'failure' || needs.regression.result == 'success' || needs.regression.result == 'failure')
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Download Smoke Allure report
+        if: needs.smoke.result == 'success' || needs.smoke.result == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-report-smoke
+          path: allure-report
+
+      - name: Download Regression Allure report
+        if: needs.regression.result == 'success' || needs.regression.result == 'failure'
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-report-regression
+          path: allure-report
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: allure-report
+
+      - name: Deploy Allure report
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Report URL
+        run: |
+          echo "========================================="
+          echo "Allure Report:"
+          echo "${{ steps.deployment.outputs.page_url }}"
+          echo "========================================="
