@@ -10,9 +10,11 @@ export class HomePage {
   }
 
   async acceptConsent() {
-    await this.page
-      .getByRole('button', { name: 'Consent' })
-      .click();
+    const consentButton = this.page.getByRole('button', { name: 'Consent' });
+
+    if (await consentButton.isVisible({ timeout: 3000 })) {
+      await consentButton.click();
+    }
   }
 
   async goToLogin() {

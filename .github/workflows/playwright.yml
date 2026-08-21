@@ -79,8 +79,8 @@ jobs:
       - name: Run regression tests
         run: npx playwright test --grep @regression
         env:
-          BASE_URL: https://automationexercise.com
-          API_URL: https://automationexercise.com/api
+          BASE_URL: ${{vars.BASE_URL}}
+          API_URL: ${{vars.API_URL}}
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
       - name: Generate Allure report
