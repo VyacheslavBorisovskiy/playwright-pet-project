@@ -6,6 +6,7 @@ test(
     tag: '@smoke',
   },
   async ({ homePage, productsPage, productDetailsPage }) => {
+    await homePage.open();
     await homePage.openProducts();
     await productsPage.viewProduct();
     await productDetailsPage.addToCart();
