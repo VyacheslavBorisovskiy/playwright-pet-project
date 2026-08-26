@@ -52,7 +52,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-smoke
-          path: playwright-report/
+          path: |
+            playwright-report/
+            test-results/
           retention-days: 7
 
   regression:
@@ -99,8 +101,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-regression
-          path: playwright-report/
-          retention-days: 14
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
 
   deploy-report:
     name: Publish Allure Report
