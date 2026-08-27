@@ -111,7 +111,7 @@ jobs:
     needs:
       - smoke
       - regression
-    if: always() && (needs.smoke.result == 'success' || needs.smoke.result == 'failure' || needs.regression.result == 'success' || needs.regression.result == 'failure')
+    if: always()
     runs-on: ubuntu-latest
 
     permissions:

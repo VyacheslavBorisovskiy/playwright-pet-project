@@ -8,6 +8,7 @@ test(
   async ({ homePage, productsPage, productDetailsPage, cartPage, loginPage }) => {
     await homePage.open();
     await homePage.openProducts();
+    // await page.pause();
     await productsPage.viewProduct();
     await productDetailsPage.addToCart();
     await productDetailsPage.viewCart();
