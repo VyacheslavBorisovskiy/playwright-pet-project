@@ -69,31 +69,27 @@ test.describe.serial('User account lifecycle via API', () => {
     },
   );
 
-  test(
-    'PUT /updateAccount changes an existing user',
-    { tag: '@regression' },
-    async ({ request }) => {
-      const response = await request.put(`${process.env.API_URL}/updateAccount`, {
-        headers: FORM_HEADERS,
-        form: { ...newUser, city: 'Ottawa', firstname: 'Updated' },
-      });
+  test('PUT /updateAccount changes an existing user', { tag: '@smoke' }, async ({ request }) => {
+    const response = await request.put(`${process.env.API_URL}/updateAccount`, {
+      headers: FORM_HEADERS,
+      form: { ...newUser, city: 'Ottawa', firstname: 'Updated' },
+    });
 
-      const body = JSON.parse(await response.text());
+    const body = JSON.parse(await response.text());
 
-      expect(body.responseCode).toBe(200);
-      expect(body.message).toBe('User updated!');
+    expect(body.responseCode).toBe(200);
+    expect(body.message).toBe('User updated!');
 
-      const check = await request.get(`${process.env.API_URL}/getUserDetailByEmail`, {
-        headers: FORM_HEADERS,
-        params: { email: uniqueEmail },
-      });
-      const checkBody = JSON.parse(await check.text());
-      expect(checkBody.user).toMatchObject({
-        first_name: 'Updated',
-        city: 'Ottawa',
-      });
-    },
-  );
+    const check = await request.get(`${process.env.API_URL}/getUserDetailByEmail`, {
+      headers: FORM_HEADERS,
+      params: { email: uniqueEmail },
+    });
+    const checkBody = JSON.parse(await check.text());
+    expect(checkBody.user).toMatchObject({
+      first_name: 'Updated',
+      city: 'Ottawa',
+    });
+  });
 
   test('DELETE /deleteAccount removes the user', { tag: '@smoke' }, async ({ request }) => {
     const response = await request.delete(`${process.env.API_URL}/deleteAccount`, {
