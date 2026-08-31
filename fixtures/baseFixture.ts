@@ -1,17 +1,17 @@
 import { test as base, expect } from '@playwright/test';
-import { HomePage } from '../pages/HomePage';
-import { LoginPage } from '../pages/LoginPage';
-import { ProductsPage } from '../pages/ProductsPage';
-import { ProductDetailsPage } from '../pages/ProductDetailsPage';
-import { CartPage } from '../pages/CartPage';
+import { HomePage } from '../tests/pages/HomePage';
+import { LoginPage } from '../tests/pages/LoginPage';
+import { ProductsPage } from '../tests/pages/ProductsPage';
+import { CartPage } from '../tests/pages/CartPage';
 
-export const test = base.extend<{
+type Fixtures = {
   homePage: HomePage;
   loginPage: LoginPage;
   productsPage: ProductsPage;
-  productDetailsPage: ProductDetailsPage;
   cartPage: CartPage;
-}>({
+};
+
+export const test = base.extend<Fixtures>({
   page: async ({ page }, use) => {
     await page.route('**/*', async (route) => {
       const url = route.request().url();
@@ -34,9 +34,6 @@ export const test = base.extend<{
   },
   productsPage: async ({ page }, use) => {
     await use(new ProductsPage(page));
-  },
-  productDetailsPage: async ({ page }, use) => {
-    await use(new ProductDetailsPage(page));
   },
   cartPage: async ({ page }, use) => {
     await use(new CartPage(page));

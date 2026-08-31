@@ -5,13 +5,13 @@ test(
   {
     tag: '@regression',
   },
-  async ({ homePage, productsPage, productDetailsPage, cartPage, loginPage }) => {
+  async ({ homePage, productsPage, cartPage, loginPage }) => {
     await homePage.open();
     await homePage.openProducts();
     // await page.pause();
     await productsPage.viewProduct();
-    await productDetailsPage.addToCart();
-    await productDetailsPage.viewCart();
+    await cartPage.addToCart();
+    await cartPage.viewCart();
     await cartPage.proceedToCheckout();
     await cartPage.goToRegisterLogin();
 

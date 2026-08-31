@@ -12,9 +12,9 @@
   },
   "include": [
     "tests/**/*.ts",
-    "pages/**/*.ts",
+    "tests/pages/**/*.ts",
     "fixtures/**/*.ts",
-    "utils/**/*.ts",
+    "tests/utils/**/*.ts",
     "playwright.config.ts"
   ]
 }

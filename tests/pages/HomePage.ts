@@ -24,6 +24,6 @@ export class HomePage {
   }
 
   async openProducts() {
-    this.productsLink.click();
+    await this.productsLink.click();
   }
 }

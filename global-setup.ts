@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { checkApplicationHealth } from './utils/applicationHealth';
+import { checkApplicationHealth } from './tests/utils/applicationHealth';
 
 async function globalSetup() {
   await checkApplicationHealth();

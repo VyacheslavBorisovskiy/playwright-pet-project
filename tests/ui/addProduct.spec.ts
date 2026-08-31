@@ -5,13 +5,13 @@ test(
   {
     tag: '@smoke',
   },
-  async ({ homePage, productsPage, productDetailsPage }) => {
+  async ({ homePage, productsPage, cartPage }) => {
     await homePage.open();
     await homePage.openProducts();
     await productsPage.viewProduct();
-    await productDetailsPage.addToCart();
-    await productDetailsPage.continueShopping();
+    await cartPage.addToCart();
+    await cartPage.viewCart();
 
-    await expect(productDetailsPage.writeReviewLink).toBeVisible();
+    await expect(cartPage.proceedToCheckoutButton).toBeVisible();
   },
 );
