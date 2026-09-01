@@ -4,19 +4,22 @@ on:
   push:
   schedule:
     - cron: '0 2 * * *'
-
   workflow_dispatch:
 
 jobs:
+  # ============================================================
+  # SMOKE TESTS
+  # ============================================================
   smoke:
     name: Smoke Tests
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
         shardIndex: [1, 2, 3, 4]
         shardTotal: [4]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,44 +35,51 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
+
       - name: Run smoke tests
-        run: npx playwright test --grep @smoke
+        run: |
+          npx playwright test \
+            --grep @smoke \
+            --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
         env:
           BASE_URL: ${{ vars.BASE_URL }}
           API_URL: ${{ vars.API_URL }}
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-      - name: Generate Allure report
-        if: always()
-        run: npx allure generate allure-results -o allure-report
 
-      - name: Upload Smoke Allure report
+      - name: Upload Smoke Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-report-smoke
-          path: allure-report
+          name: allure-results-smoke-${{ matrix.shardIndex }}
+          path: allure-results
+          if-no-files-found: ignore
           retention-days: 7
 
       - name: Upload Smoke Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-smoke
+          name: playwright-report-smoke-${{ matrix.shardIndex }}
           path: |
             playwright-report/
             test-results/
+          if-no-files-found: ignore
           retention-days: 7
 
+  # ============================================================
+  # REGRESSION TESTS
+  # ============================================================
   regression:
     name: Regression Tests
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
         shardIndex: [1, 2, 3, 4]
         shardTotal: [4]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -87,76 +97,280 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run regression tests
-        run: npx playwright test --grep @regression
+        run: |
+          npx playwright test \
+            --grep @regression \
+            --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
         env:
-          BASE_URL: ${{vars.BASE_URL}}
-          API_URL: ${{vars.API_URL}}
+          BASE_URL: ${{ vars.BASE_URL }}
+          API_URL: ${{ vars.API_URL }}
           TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-      - name: Generate Allure report
-        if: always()
-        run: npx allure generate allure-results -o allure-report
 
-      - name: Upload Regression Allure report
+      - name: Upload Regression Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-report-regression
-          path: allure-report
+          name: allure-results-regression-${{ matrix.shardIndex }}
+          path: allure-results
+          if-no-files-found: ignore
           retention-days: 7
+
       - name: Upload Regression Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-regression
+          name: playwright-report-regression-${{ matrix.shardIndex }}
           path: |
             playwright-report/
             test-results/
+          if-no-files-found: ignore
           retention-days: 7
 
+  # ============================================================
+  # GENERATE AND DEPLOY ALLURE REPORTS
+  # ============================================================
   deploy-report:
-    name: Publish Allure Report
+    name: Publish Allure Reports
+
     needs:
       - smoke
       - regression
+
     if: always()
+
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
 
     steps:
-      - name: Download Smoke Allure report
+      # ----------------------------------------------------------
+      # Checkout repository
+      # ----------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ----------------------------------------------------------
+      # Setup Node.js
+      # ----------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # ----------------------------------------------------------
+      # Install dependencies
+      # ----------------------------------------------------------
+      - name: Install dependencies
+        run: npm ci
+
+      # ==========================================================
+      # DOWNLOAD SMOKE RESULTS
+      # ==========================================================
+      - name: Download Smoke Allure results
         if: needs.smoke.result == 'success' || needs.smoke.result == 'failure'
         uses: actions/download-artifact@v4
         with:
-          name: allure-report-smoke
-          path: allure-report
+          pattern: allure-results-smoke-*
+          path: allure/smoke/results
+          merge-multiple: true
 
-      - name: Download Regression Allure report
+      # ==========================================================
+      # DOWNLOAD REGRESSION RESULTS
+      # ==========================================================
+      - name: Download Regression Allure results
         if: needs.regression.result == 'success' || needs.regression.result == 'failure'
         uses: actions/download-artifact@v4
         with:
-          name: allure-report-regression
-          path: allure-report
+          pattern: allure-results-regression-*
+          path: allure/regression/results
+          merge-multiple: true
 
+      # ==========================================================
+      # RESTORE PREVIOUS ALLURE HISTORY
+      # ==========================================================
+      - name: Restore Allure history
+        run: |
+          mkdir -p allure/smoke/results/history
+          mkdir -p allure/regression/results/history
+
+          if git ls-remote --exit-code origin refs/heads/allure-history >/dev/null 2>&1; then
+            echo "Allure history branch found."
+
+            git fetch origin allure-history
+
+            # Smoke history
+            git archive origin/allure-history smoke-history 2>/dev/null \
+              | tar -x -C allure/smoke/results \
+              || true
+
+            # Regression history
+            git archive origin/allure-history regression-history 2>/dev/null \
+              | tar -x -C allure/regression/results \
+              || true
+          else
+            echo "No previous Allure history found. This is the first run."
+          fi
+
+          echo ""
+          echo "Smoke history:"
+          find allure/smoke/results/history -type f 2>/dev/null || true
+
+          echo ""
+          echo "Regression history:"
+          find allure/regression/results/history -type f 2>/dev/null || true
+
+      # ==========================================================
+      # GENERATE SMOKE REPORT
+      # ==========================================================
+      - name: Generate Smoke Allure report
+        if: needs.smoke.result == 'success' || needs.smoke.result == 'failure'
+        run: |
+          npx allure generate \
+            allure/smoke/results \
+            --clean \
+            -o allure/smoke/report
+
+      # ==========================================================
+      # GENERATE REGRESSION REPORT
+      # ==========================================================
+      - name: Generate Regression Allure report
+        if: needs.regression.result == 'success' || needs.regression.result == 'failure'
+        run: |
+          npx allure generate \
+            allure/regression/results \
+            --clean \
+            -o allure/regression/report
+
+      # ==========================================================
+      # PREPARE GITHUB PAGES
+      # ==========================================================
+      - name: Prepare GitHub Pages
+        run: |
+          rm -rf pages
+          mkdir -p pages/allure
+
+          # Smoke
+          if [ -d "allure/smoke/report" ]; then
+            mkdir -p pages/allure/smoke
+            cp -R allure/smoke/report/* pages/allure/smoke/
+          fi
+
+          # Regression
+          if [ -d "allure/regression/report" ]; then
+            mkdir -p pages/allure/regression
+            cp -R allure/regression/report/* pages/allure/regression/
+          fi
+
+          # Prevent Jekyll from modifying Allure files
+          touch pages/.nojekyll
+
+          echo "GitHub Pages structure:"
+          find pages/allure -maxdepth 2 -type d | sort
+
+      # ==========================================================
+      # SAVE HISTORY
+      # ==========================================================
+      - name: Save Allure history
+        run: |
+          rm -rf /tmp/allure-history
+          mkdir -p /tmp/allure-history
+
+          # ------------------------------------------------------
+          # Preserve existing history branch content
+          # ------------------------------------------------------
+          if git ls-remote --exit-code origin refs/heads/allure-history >/dev/null 2>&1; then
+            echo "Existing allure-history branch found."
+
+            git fetch origin allure-history
+
+            git archive origin/allure-history | tar -x -C /tmp/allure-history
+          else
+            echo "Creating new allure-history branch."
+          fi
+
+          # ------------------------------------------------------
+          # Replace Smoke history
+          # ------------------------------------------------------
+          if [ -d "allure/smoke/report/history" ]; then
+            rm -rf /tmp/allure-history/smoke-history
+            mkdir -p /tmp/allure-history/smoke-history
+
+            cp -R allure/smoke/report/history/. \
+              /tmp/allure-history/smoke-history/
+          fi
+
+          # ------------------------------------------------------
+          # Replace Regression history
+          # ------------------------------------------------------
+          if [ -d "allure/regression/report/history" ]; then
+            rm -rf /tmp/allure-history/regression-history
+            mkdir -p /tmp/allure-history/regression-history
+
+            cp -R allure/regression/report/history/. \
+              /tmp/allure-history/regression-history/
+          fi
+
+          # ------------------------------------------------------
+          # Commit history
+          # ------------------------------------------------------
+          cd /tmp/allure-history
+
+          git init
+          git checkout -b allure-history
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .
+
+          git commit -m "Update Allure history" || true
+
+          git remote add origin \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+
+          git push origin allure-history --force
+
+      # ==========================================================
+      # CONFIGURE GITHUB PAGES
+      # ==========================================================
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
+      # ==========================================================
+      # UPLOAD GITHUB PAGES ARTIFACT
+      # ==========================================================
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: allure-report
+          path: pages
 
-      - name: Deploy Allure report
+      # ==========================================================
+      # DEPLOY
+      # ==========================================================
+      - name: Deploy Allure reports
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Report URL
+      # ==========================================================
+      # PRINT URLS
+      # ==========================================================
+      - name: Report URLs
         run: |
           echo "========================================="
-          echo "Allure Report:"
-          echo "${{ steps.deployment.outputs.page_url }}"
+          echo "Allure Reports"
+          echo "========================================="
+          echo ""
+          echo "Smoke:"
+          echo "${{ steps.deployment.outputs.page_url }}allure/smoke/"
+          echo ""
+          echo "Regression:"
+          echo "${{ steps.deployment.outputs.page_url }}allure/regression/"
+          echo ""
           echo "========================================="
