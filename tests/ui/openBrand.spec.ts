@@ -1,7 +1,7 @@
 import { test, expect } from '../../fixtures/baseFixture';
 
 test(
-  'User can open a brand from the products page',
+  'User can open a brand on the products page',
   {
     tag: '@regression',
   },
