@@ -283,68 +283,130 @@ jobs:
           find pages/allure -maxdepth 2 -type d | sort
 
       # ==========================================================
-      # SAVE HISTORY
+      # SAVE ALLURE HISTORY
       # ==========================================================
       - name: Save Allure history
+        if: always()
         run: |
+          set -e
+
+          echo "Preparing Allure history..."
+
           rm -rf /tmp/allure-history
           mkdir -p /tmp/allure-history
 
           # ------------------------------------------------------
-          # Preserve existing history branch content
-          # ------------------------------------------------------
-          if git ls-remote --exit-code origin refs/heads/allure-history >/dev/null 2>&1; then
-            echo "Existing allure-history branch found."
-
-            git fetch origin allure-history
-
-            git archive origin/allure-history \
-              | tar -x -C /tmp/allure-history
-          else
-            echo "Creating new allure-history branch."
-          fi
-
-          # ------------------------------------------------------
-          # Replace Smoke history
+          # Smoke history
           # ------------------------------------------------------
           if [ -d "allure/smoke/report/history" ]; then
-            rm -rf /tmp/allure-history/smoke-history
+            echo "Copying Smoke history..."
+
             mkdir -p /tmp/allure-history/smoke-history
 
             cp -R allure/smoke/report/history/. \
               /tmp/allure-history/smoke-history/
+          else
+            echo "No Smoke history generated."
           fi
 
           # ------------------------------------------------------
-          # Replace Regression history
+          # Regression history
           # ------------------------------------------------------
           if [ -d "allure/regression/report/history" ]; then
-            rm -rf /tmp/allure-history/regression-history
+            echo "Copying Regression history..."
+
             mkdir -p /tmp/allure-history/regression-history
 
             cp -R allure/regression/report/history/. \
               /tmp/allure-history/regression-history/
+          else
+            echo "No Regression history generated."
           fi
 
           # ------------------------------------------------------
-          # Commit history
+          # Check whether there is anything to save
           # ------------------------------------------------------
-          cd /tmp/allure-history
+          echo ""
+          echo "History files to save:"
+          find /tmp/allure-history -type f || true
 
-          git init
-          git checkout -b allure-history
+          if [ -z "$(find /tmp/allure-history -type f -print -quit)" ]; then
+            echo ""
+            echo "No Allure history files were generated."
+            echo "Nothing to push."
+            exit 0
+          fi
+
+          # ------------------------------------------------------
+          # Clone existing history branch if it exists
+          # ------------------------------------------------------
+          rm -rf /tmp/allure-history-repo
+
+          if git ls-remote --exit-code origin refs/heads/allure-history >/dev/null 2>&1; then
+            echo ""
+            echo "Existing allure-history branch found."
+
+            git clone \
+              --branch allure-history \
+              --single-branch \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" \
+              /tmp/allure-history-repo
+          else
+            echo ""
+            echo "No allure-history branch found."
+            echo "Creating it now."
+
+            mkdir -p /tmp/allure-history-repo
+            cd /tmp/allure-history-repo
+
+            git init
+            git checkout -b allure-history
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fi
+
+          # ------------------------------------------------------
+          # Replace stored history
+          # ------------------------------------------------------
+          rm -rf /tmp/allure-history-repo/smoke-history
+          rm -rf /tmp/allure-history-repo/regression-history
+
+          if [ -d "/tmp/allure-history/smoke-history" ]; then
+            cp -R /tmp/allure-history/smoke-history \
+              /tmp/allure-history-repo/
+          fi
+
+          if [ -d "/tmp/allure-history/regression-history" ]; then
+            cp -R /tmp/allure-history/regression-history \
+              /tmp/allure-history-repo/
+          fi
+
+          # ------------------------------------------------------
+          # Commit and push
+          # ------------------------------------------------------
+          cd /tmp/allure-history-repo
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add .
+          git add smoke-history regression-history
 
-          git commit -m "Update Allure history" || true
+          if git diff --cached --quiet; then
+            echo ""
+            echo "Allure history has not changed."
+            exit 0
+          fi
 
-          git remote add origin \
-            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git commit -m "Update Allure history"
 
-          git push origin allure-history --force
+          # For a newly initialized repository, add remote.
+          if ! git remote get-url origin >/dev/null 2>&1; then
+            git remote add origin \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          fi
+
+          git push origin allure-history
 
       # ==========================================================
       # CONFIGURE GITHUB PAGES
