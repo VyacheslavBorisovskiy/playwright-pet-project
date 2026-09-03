@@ -146,6 +146,10 @@ jobs:
       pages: write
       id-token: write
 
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       # ----------------------------------------------------------
       # Checkout repository
@@ -206,14 +210,20 @@ jobs:
             git fetch origin allure-history
 
             # Smoke history
-            git archive origin/allure-history smoke-history 2>/dev/null \
-              | tar -x -C allure/smoke/results \
-              || true
+            if git archive origin/allure-history smoke-history >/dev/null 2>&1; then
+              git archive origin/allure-history smoke-history \
+                | tar -x \
+                    --strip-components=1 \
+                    -C allure/smoke/results/history
+            fi
 
             # Regression history
-            git archive origin/allure-history regression-history 2>/dev/null \
-              | tar -x -C allure/regression/results \
-              || true
+            if git archive origin/allure-history regression-history >/dev/null 2>&1; then
+              git archive origin/allure-history regression-history \
+                | tar -x \
+                    --strip-components=1 \
+                    -C allure/regression/results/history
+            fi
           else
             echo "No previous Allure history found. This is the first run."
           fi
@@ -259,13 +269,13 @@ jobs:
           # Smoke
           if [ -d "allure/smoke/report" ]; then
             mkdir -p pages/allure/smoke
-            cp -R allure/smoke/report/* pages/allure/smoke/
+            cp -R allure/smoke/report/. pages/allure/smoke/
           fi
 
           # Regression
           if [ -d "allure/regression/report" ]; then
             mkdir -p pages/allure/regression
-            cp -R allure/regression/report/* pages/allure/regression/
+            cp -R allure/regression/report/. pages/allure/regression/
           fi
 
           # Prevent Jekyll from modifying Allure files
@@ -290,7 +300,8 @@ jobs:
 
             git fetch origin allure-history
 
-            git archive origin/allure-history | tar -x -C /tmp/allure-history
+            git archive origin/allure-history \
+              | tar -x -C /tmp/allure-history
           else
             echo "Creating new allure-history branch."
           fi
@@ -347,7 +358,7 @@ jobs:
       # UPLOAD GITHUB PAGES ARTIFACT
       # ==========================================================
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: pages
 
