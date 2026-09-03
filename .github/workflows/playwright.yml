@@ -244,7 +244,6 @@ jobs:
         run: |
           npx allure generate \
             allure/smoke/results \
-            --clean \
             -o allure/smoke/report
 
       # ==========================================================
@@ -255,7 +254,6 @@ jobs:
         run: |
           npx allure generate \
             allure/regression/results \
-            --clean \
             -o allure/regression/report
 
       # ==========================================================
